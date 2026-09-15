@@ -2,6 +2,7 @@ import argparse
 import csv
 import sys
 from pathlib import Path
+# step 1
 import logging
 
 
@@ -22,6 +23,7 @@ def check_data(filename):
     return header, data, missing_rows
 
 
+# step 2
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -59,9 +61,11 @@ parser.add_argument(
 args = parser.parse_args()
 
 
+# step 3
 if args.verbose:
     logger.setLevel(logging.DEBUG)
 
+# step 4
 logger.debug(f"Arguments parsed: filename={args.input}")
 
 
@@ -73,6 +77,7 @@ logger.debug(f"Arguments parsed: filename={args.input}")
 
 # print(f"File validated: '{args.input}'")
 
+# step 5
 p = Path(args.input)
 if not p.is_file():
     logger.error(f"File not found: '{args.input}'")
@@ -80,18 +85,22 @@ if not p.is_file():
     
 logger.info(f"File validated: '{args.input}'")
 
+# step 6
 logger.debug(f"Loading data from: '{args.input}'")
 
 
 # Check the data
 header, data, missing_rows = check_data(args.input)
 
+# step 7
 logger.info(f"INFO Loaded {len(data)} rows")
 
+# step 8
 if len(data) == 0:
     logger.error("Input file contains no data; cannot continue")
     sys.exit(1)
 
+# step 9
 for row_number in missing_rows:
     logger.warning(f"Row {row_number} has missing values")
 
@@ -101,4 +110,5 @@ with open(args.output, "w") as f:
     f.write(f"Number of columns: {len(header)}\n")
     f.write(f"Number of rows with missing values: {len(missing_rows)}\n")
 
+# step 10
 logger.info(f"Report saved to {args.output}")
