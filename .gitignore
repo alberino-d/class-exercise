@@ -5,7 +5,6 @@ Thumbs.db
 
 # Data files
 *.csv
-*.txt
 data/
 
 # Python caches & virtual envs
@@ -18,3 +17,7 @@ venv/
 .vscode/
 .idea/
 .env
+
+# Ignore all text files except requirements.txt
+*.txt
+!requirements.txt
