@@ -6,8 +6,10 @@ from pathlib import Path
 import pandas as pd
 
 from class6_7_netflix_utils import (
+    clean_text,
     drop_missing_rows,
     remove_duplicates,
+    remove_iqr_outliers,
     show_overview,
 )
 
@@ -40,6 +42,7 @@ def main():
 
     try:
         df = pd.read_csv(filepath)
+        df_original = df.copy()
     except FileNotFoundError:
         logger.error(f"Input file not found: {filepath}")
         sys.exit(1)
@@ -56,22 +59,18 @@ def main():
     df = drop_missing_rows(df)
     logger.info(f"Dropped {before - len(df)} rows with missing values")
 
-    # TODO 4:
-    # Create a Path object from args.input.
-    # Inside a try block, load that path using pd.read_csv().
-    # Catch FileNotFoundError, log an ERROR message,
-    # and exit with sys.exit(1).
-    # Log an INFO message.
+    try:
+        df = remove_iqr_outliers(df, "runtime_minutes", 1.5)
+    except ValueError:
+        sys.exit(1)
+    logger.info(f"Removing outliers using iqr")
 
-    # TODO 5:
-    # Call show_overview().
-    # Log an INFO message.
+    for col in ["title", "type", "country"]:
+        df[col] = df[col].apply(clean_text)
+        logger.info(f"Cleaned text column: {col}")
 
-    # TODO 6:
-    # Call remove_duplicates().
-    # Call drop_missing_rows().
-    # Log an INFO message after each step that
-    # includes the number of rows removed.
+    report = {"rows_before": len(df_original), "rows_after": len(df), "rows_removed": len(df_original) - len(df), "columns": len(df.columns)}
+    logger.info(f"Cleaning complete: {report}")
 
 if __name__ == "__main__":
     main()
