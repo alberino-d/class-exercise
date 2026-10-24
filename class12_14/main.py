@@ -1,10 +1,13 @@
 #main.py
 
 import logging
+from pathlib import Path
+from io import BytesIO
 
-from fastapi import FastAPI, Query
+import pandas as pd
+from fastapi import FastAPI, Query, File, UploadFile, HTTPException
 
-from src import MovieResponse, MovieInput
+from src import MovieResponse, MovieInput, CSVInfo, DataStorage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +21,7 @@ movies = {
     2: {"id": 2, "title": "Movie B", "release_year": 2021},
 }
 
+storage = DataStorage()
 
 app = FastAPI(title="Movie API")
 
@@ -73,3 +77,62 @@ def add_movie(movie: MovieInput):
 
     logger.info(f"Added movie: id={movie_id}")
     return record
+
+
+@app.post("/demo/inspect-csv")
+async def demo_inspect_csv(file: UploadFile = File(...)):
+    # ... in File(...) means the upload is required.
+    contents = await file.read() # reads as bytes e.g. b"title,year\nMovie A,2020\n"
+    return {"filename": file.filename,"size_bytes": len(contents)}
+
+
+@app.get("/demo/movie-lookup/{movie_id}", response_model=MovieResponse)
+def demo_lookup_movie(movie_id: int):
+    movie = movies.get(movie_id)
+
+    if movie is None:
+        logger.warning(f"Movie not found: {movie_id}")
+        raise HTTPException( status_code=404, detail="Movie not found")
+
+    return movie
+
+
+@app.post("/inspect-csv", response_model=CSVInfo)
+async def inspect_csv(file: UploadFile = File(...)):
+    if Path(file.filename or "").suffix.lower() != ".csv":
+        logger.warning(f"Rejected non-CSV file: {file.filename}")
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+
+    try:
+        content = await file.read()
+        df = pd.read_csv(BytesIO(content))
+    except (pd.errors.EmptyDataError,pd.errors.ParserError,UnicodeDecodeError) as error:
+        logger.warning(f"Cannot parse CSV {file.filename}: {error}")
+        raise HTTPException(status_code=400, detail="Cannot parse the uploaded CSV")
+
+    dataset_id = storage.save_data(df, file.filename)
+    logger.info(f"Stored CSV: id={dataset_id}, filename={file.filename}")
+
+    return CSVInfo(
+        filename=file.filename,
+        rows=len(df),
+        columns=len(df.columns),
+        column_names=list(df.columns),
+        dataset_id=dataset_id
+    )
+
+
+@app.get("/datasets/{dataset_id}/shape")
+def get_dataset_shape(dataset_id: int):
+    df = storage.get_data(dataset_id)
+
+    if df is None:
+        logger.warning(f"Dataset not found: id={dataset_id}")
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+    logger.info(f"Retrieved dataset: id={dataset_id}")
+
+    return {
+        "dataset_id": dataset_id,
+        "rows": len(df),
+        "columns": len(df.columns)
+    }
