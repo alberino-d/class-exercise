@@ -7,7 +7,9 @@ from io import BytesIO
 import pandas as pd
 from fastapi import FastAPI, Query, File, UploadFile, HTTPException
 
-from src import MovieResponse, MovieInput, CSVInfo, DataStorage
+from src import MovieResponse, MovieInput, CSVInfo, DataStorage, ProcessConfig
+
+from middleware import log_requests
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +26,9 @@ movies = {
 storage = DataStorage()
 
 app = FastAPI(title="Movie API")
+
+# After the existing app = FastAPI(...):
+app.middleware("http")(log_requests)
 
 
 @app.get("/health")
@@ -136,3 +141,16 @@ def get_dataset_shape(dataset_id: int):
         "rows": len(df),
         "columns": len(df.columns)
     }
+
+
+@app.post("/demo/process-config")
+def demo_process_config(config: ProcessConfig):
+    df = pd.DataFrame({"title": ["Movie A", "Movie A", "Movie B", None]})
+    settings = config.model_dump()
+
+    if settings["processing"]["remove_duplicates"]:
+        df = df.drop_duplicates()
+    if settings["processing"]["drop_missing"]:
+        df = df.dropna()
+        
+    return {"rows": len(df)}
