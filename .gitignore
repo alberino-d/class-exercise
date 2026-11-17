@@ -7,6 +7,7 @@ Thumbs.db
 *.csv
 data/
 class16_18/data/
+class20_21/data/
 
 # Python caches & virtual envs
 __pycache__/
