@@ -21,6 +21,10 @@ def summarize_years(df, window=3):
     logger.debug(f"Year summary: years={len(summary)}, window={window}")
     return summary
 
+def filter_movies(df, min_rating):
+    filtered = df[df["rating"] >= min_rating]
+    return filtered[["title", "release_year", "rating", "genre"]]
+
 
 def main():
     df = pd.read_csv(Path("data") / "class20_movies.csv")
